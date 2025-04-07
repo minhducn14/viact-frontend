@@ -66,3 +66,9 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px #f0f4fc inset !important;
+  -webkit-text-fill-color: #000 !important;
+}
