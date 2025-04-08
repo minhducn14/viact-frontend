@@ -1,4 +1,4 @@
-import { TextField } from '@mui/material';
+import { TextField, Typography } from '@mui/material';
 
 interface Props {
     id: string;
@@ -10,30 +10,44 @@ interface Props {
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export default function AuthTextField({ id, name, label, type = 'text', value, error, onChange }: Props) {
+export default function TextFieldCustom({
+    id,
+    name,
+    label,
+    type = 'text',
+    value,
+    error,
+    onChange,
+}: Props) {
+    const labelText = label.replace('*', '').trim();
+
     return (
         <TextField
             id={id}
             name={name}
-            label={label}
             type={type}
             variant="outlined"
             value={value}
             onChange={onChange}
-            error={!!error}
+            error={Boolean(error)}
             helperText={error}
+            fullWidth
+            label={
+                <Typography component="span" fontSize="14px">
+                    {labelText}{' '}
+                    <Typography component="span" color="red">
+                        *
+                    </Typography>
+                </Typography>
+            }
             sx={{
-                marginTop: 2,
-                width: '100%',
+                mt: 2,
                 '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
                     borderColor: 'red',
                 },
                 '& .MuiInputLabel-root.Mui-focused': {
                     color: 'red',
                 },
-                '& .MuiInputLabel-root': {
-                    fontSize: '14px'
-                }
             }}
         />
     );

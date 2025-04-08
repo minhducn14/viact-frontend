@@ -1,10 +1,13 @@
 import * as React from 'react';
 import backgroundImage from '../assets/background.png';
-import AuthTextField from '../components/AuthTextField';
-import GoogleLoginButton from '../components/GoogleLoginButton';
+import TextFieldCustom from '../components/TextFieldCustom';
 import LogoWithTagline from '../components/LogoWithTagline';
+import axios from 'axios';
+import 'react-toastify/dist/ReactToastify.css';
 
 import {
+    Alert,
+    AlertTitle,
     Box,
     Button,
     Checkbox,
@@ -14,6 +17,8 @@ import {
     Stack,
     Typography,
 } from '@mui/material';
+import { toast } from 'react-toastify';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function LoginPage() {
     const [showPassword, setShowPassword] = React.useState(false);
@@ -26,6 +31,8 @@ export default function LoginPage() {
         emailOrUsername: '',
         password: '',
     });
+
+    const [loginError, setLoginError] = React.useState('');
 
     const handleShowPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setShowPassword(event.target.checked);
@@ -52,44 +59,79 @@ export default function LoginPage() {
             newErrors.password = 'Password is required';
             isValid = false;
         }
-
         setErrors(newErrors);
         return isValid;
     };
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        if (validateForm()) {
-            console.log({
-                email: formData.emailOrUsername,
+        if (!validateForm()) {
+            return;
+        }
+        try {
+            const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+                username: formData.emailOrUsername,
                 password: formData.password,
             });
-            // TODO: Gọi API login tại đây
+            console.log(response);
+            if (response.status === 200) {
+                localStorage.setItem('accessToken', response.data.accessToken);
+                localStorage.setItem('refreshToken', response.data.refreshToken);
+
+            } else {
+                setLoginError(response.data.message);
+                toast.error(loginError);
+            }
+        } catch (error: any) {
+            const errorMsg =
+                error.response?.data?.message || 'Unauthorized.';
+            setLoginError(errorMsg);
+            toast.error(errorMsg);
+        }
+
+
+    };
+
+    const handleGoogleLoginSuccess = async (credentialResponse: any) => {
+        const credential = credentialResponse.credential;
+        if (credential) {
+            try {
+                const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/google-login`, {
+                    idToken: credential
+                });
+                console.log(response);
+                if (response.status === 201) {
+                    localStorage.setItem('accessToken', response.data.accessToken);
+                    localStorage.setItem('refreshToken', response.data.refreshToken);
+                }
+            } catch (err: any) {
+                console.error(err);
+                toast.error(err.response?.data?.message || 'Google login failed');
+            }
         }
     };
 
     return (
         <Box
             sx={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
                 width: '100vw',
                 height: '100vh',
                 backgroundImage: `url(${backgroundImage})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
+                display: 'grid',
+                placeItems: 'center',
+                overflowY: 'auto',
             }}
         >
             <Box
                 sx={{
+                    justifyContent: 'center',
                     backgroundColor: 'white',
                     padding: 4,
+                    margin: 5,
                     borderRadius: 2,
                     boxShadow: 3,
                     minWidth: 300,
@@ -98,6 +140,34 @@ export default function LoginPage() {
                 }}
             >
                 <LogoWithTagline />
+                {loginError && (
+                    <Alert
+                        severity="error"
+                        icon={false}
+                        sx={{
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: 2,
+                            border: '1px solid rgb(235, 87, 87)',
+                        }}
+                    >
+                        <AlertTitle
+                            sx={{
+                                color: 'black',
+                                width: '100%',
+                                height: '100%',
+                                padding: 0,
+                                display: 'flex',
+                                textAlign: 'center',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                margin: 0,
+                            }}
+                        >
+                            {loginError}
+                        </AlertTitle>
+                    </Alert>
+                )}
 
                 <Typography sx={{ color: 'black', textTransform: 'uppercase', fontSize: 16 }}>
                     Login
@@ -107,7 +177,7 @@ export default function LoginPage() {
                 </Typography>
 
                 <FormControl component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-                    <AuthTextField
+                    <TextFieldCustom
                         id="emailOrUsername"
                         name="emailOrUsername"
                         label="Email or Username"
@@ -116,7 +186,7 @@ export default function LoginPage() {
                         onChange={handleInputChange}
                     />
 
-                    <AuthTextField
+                    <TextFieldCustom
                         id="password"
                         name="password"
                         label="Password"
@@ -183,11 +253,16 @@ export default function LoginPage() {
                     OR
                 </Typography>
 
-                <GoogleLoginButton onClick={() => console.log('Login with Google clicked')} />
+                <Box sx={{ mt: 2, mb: 2, display: 'flex', justifyContent: 'center' }}>
+                    <GoogleLogin
+                        onSuccess={handleGoogleLoginSuccess}
+                        onError={() => console.warn("Google login popup might have been blocked.")}
+                    />
+                </Box>
 
                 <Typography sx={{ color: 'black', marginTop: 3, fontSize: 13 }} variant="body2">
                     Not on Viact yet?{' '}
-                    <Link href="/sign-up" underline="none" sx={{ display: 'inline-block' }}>
+                    <Link href="/signup" underline="none" sx={{ display: 'inline-block' }}>
                         <Typography
                             component="span"
                             sx={{
@@ -203,6 +278,6 @@ export default function LoginPage() {
                     now.
                 </Typography>
             </Box>
-        </Box>
+        </Box >
     );
 }
