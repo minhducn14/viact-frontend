@@ -113,8 +113,11 @@ export default function LoginPage() {
                 });
 
                 if (response.status === 201) {
-                    const { accessToken, refreshToken, user } = response.data;
-                    login(user, accessToken, refreshToken);
+                    const { accessToken, refreshToken, safeUser } = response.data;
+                    console.log('Access Token:', accessToken);
+                    console.log('Refresh Token:', refreshToken);
+                    console.log('Safe User:', safeUser);
+                    login(safeUser, accessToken, refreshToken);
                     toast.success("Google login successful!");
                     navigate('/');
                 }
