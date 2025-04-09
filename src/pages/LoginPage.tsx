@@ -19,8 +19,13 @@ import {
 } from '@mui/material';
 import { toast } from 'react-toastify';
 import { GoogleLogin } from '@react-oauth/google';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
 
 export default function LoginPage() {
+    const { login, user } = useAuth();
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = React.useState(false);
     const [formData, setFormData] = React.useState({
         emailOrUsername: '',
@@ -33,6 +38,12 @@ export default function LoginPage() {
     });
 
     const [loginError, setLoginError] = React.useState('');
+
+    React.useEffect(() => {
+        if (user) {
+            console.log("✅ User đã login thành công:", user);
+        }
+    }, [user]);
 
     const handleShowPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setShowPassword(event.target.checked);
@@ -65,32 +76,32 @@ export default function LoginPage() {
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        console.log('Form submitted:', formData);
+        if (!validateForm()) return;
 
-        if (!validateForm()) {
-            return;
-        }
         try {
             const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
                 username: formData.emailOrUsername,
                 password: formData.password,
             });
-            console.log(response);
-            if (response.status === 200) {
-                localStorage.setItem('accessToken', response.data.accessToken);
-                localStorage.setItem('refreshToken', response.data.refreshToken);
 
+            console.log('Login response:', response);
+            if (response.status === 201) {
+                const { accessToken, refreshToken, safeUser } = response.data;
+                console.log('Access Token:', accessToken);
+                console.log('Refresh Token:', refreshToken);
+                console.log('Safe User:', safeUser);
+                login(safeUser, accessToken, refreshToken);
+                toast.success("Login successful!");
             } else {
                 setLoginError(response.data.message);
-                toast.error(loginError);
+                toast.error(response.data.message);
             }
         } catch (error: any) {
-            const errorMsg =
-                error.response?.data?.message || 'Unauthorized.';
+            const errorMsg = error.response?.data?.message || 'Unauthorized.';
             setLoginError(errorMsg);
             toast.error(errorMsg);
         }
-
-
     };
 
     const handleGoogleLoginSuccess = async (credentialResponse: any) => {
@@ -98,12 +109,14 @@ export default function LoginPage() {
         if (credential) {
             try {
                 const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/google-login`, {
-                    idToken: credential
+                    idToken: credential,
                 });
-                console.log(response);
+
                 if (response.status === 201) {
-                    localStorage.setItem('accessToken', response.data.accessToken);
-                    localStorage.setItem('refreshToken', response.data.refreshToken);
+                    const { accessToken, refreshToken, user } = response.data;
+                    login(user, accessToken, refreshToken);
+                    toast.success("Google login successful!");
+                    navigate('/');
                 }
             } catch (err: any) {
                 console.error(err);
